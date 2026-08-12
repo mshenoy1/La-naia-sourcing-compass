@@ -33,18 +33,30 @@ export type TradeDataResult = TradeDataSuccess | TradeDataFailure;
 
 const STORAGE_KEY = 'sourcingCompass.censusApiKey';
 
+/**
+ * Optional build-time default, e.g. from a git-ignored .env.local
+ * (VITE_CENSUS_API_KEY=...) — lets a local dev environment auto-populate
+ * the key instead of pasting it in every time, without ever committing it
+ * to source control. Only used the first time (before the user has
+ * explicitly saved or cleared a key in this browser).
+ */
+const ENV_DEFAULT_KEY: string =
+  typeof import.meta.env.VITE_CENSUS_API_KEY === 'string' ? import.meta.env.VITE_CENSUS_API_KEY.trim() : '';
+
 export function getStoredCensusApiKey(): string {
   try {
-    return localStorage.getItem(STORAGE_KEY) ?? '';
+    const stored = localStorage.getItem(STORAGE_KEY);
+    // null means "never explicitly set" — fall back to the env default.
+    // '' means the user explicitly cleared it, which we respect as-is.
+    return stored !== null ? stored : ENV_DEFAULT_KEY;
   } catch {
-    return '';
+    return ENV_DEFAULT_KEY;
   }
 }
 
 export function setStoredCensusApiKey(key: string): void {
   try {
-    if (key.trim()) localStorage.setItem(STORAGE_KEY, key.trim());
-    else localStorage.removeItem(STORAGE_KEY);
+    localStorage.setItem(STORAGE_KEY, key.trim());
   } catch {
     // localStorage unavailable (private browsing, etc.) — silently no-op
   }

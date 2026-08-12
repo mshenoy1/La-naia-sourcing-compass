@@ -70,6 +70,13 @@ npm install
 npm run dev
 ```
 
+To auto-populate the "Real Import Cost Data" panel with your own free
+[Census API key](https://api.census.gov/data/key_signup.html) instead of
+pasting it in every session, copy `.env.local.example` to `.env.local` and
+fill in `VITE_CENSUS_API_KEY`. That file is git-ignored — the key never gets
+committed. You can still remove/replace the key from within the app itself
+at any time.
+
 ## Scripts
 
 - `npm run dev` — start the Vite dev server
