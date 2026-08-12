@@ -102,8 +102,21 @@ export interface TariffLineItem {
   note?: string;
 }
 
+/**
+ * Where a country's first (FOB) cost figure came from: a real average
+ * declared US import value for this HTS code + country (Census trade data),
+ * or the category-typical retail-price ratio heuristic.
+ */
+export interface FirstCostSource {
+  amount: number;
+  source: 'trade_data' | 'heuristic';
+  detail?: string;
+}
+
 export interface CalculatedResult extends CountryProfile {
   fobCost: number;
+  fobCostSource: 'trade_data' | 'heuristic';
+  fobCostDetail?: string;
   mfnAmount: number;
   section301Amount: number;
   section232Amount: number;

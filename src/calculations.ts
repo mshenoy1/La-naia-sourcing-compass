@@ -1,5 +1,5 @@
 import { AD_CVD_RULES, COUNTRY_PROFILES, DEFAULT_ADCVD_NOTE, WEIGHT_CLASS_FREIGHT_MULTIPLIER } from './tariffData';
-import type { CalculatedResult, CategoryProfile, CountryProfile, TariffLineItem } from './types';
+import type { CalculatedResult, CategoryProfile, CountryProfile, FirstCostSource, TariffLineItem } from './types';
 
 function getAdCvd(category: CategoryProfile, country: CountryProfile): { rate: number; note: string } {
   const rule = AD_CVD_RULES.find((r) => r.category === category.id && r.countryCode === country.code);
@@ -39,12 +39,18 @@ function getForcedLaborTariffRate(
 }
 
 export function calculateLandedCosts(
-  firstCost: number,
+  defaultFirstCost: number,
   category: CategoryProfile,
   marginTarget: number,
   retailPrice?: number,
+  firstCostByCountry?: Partial<Record<string, FirstCostSource>>,
 ): CalculatedResult[] {
   const results = COUNTRY_PROFILES.map((country) => {
+    const firstCostOverride = firstCostByCountry?.[country.code];
+    const firstCost = firstCostOverride?.amount ?? defaultFirstCost;
+    const fobCostSource = firstCostOverride?.source ?? 'heuristic';
+    const fobCostDetail = firstCostOverride?.detail;
+
     const effectiveMfnRate = country.ftaDutyFree ? 0 : category.mfnRate;
     const mfnAmount = firstCost * (effectiveMfnRate / 100);
 
@@ -124,6 +130,8 @@ export function calculateLandedCosts(
     return {
       ...country,
       fobCost: firstCost,
+      fobCostSource,
+      fobCostDetail,
       mfnAmount,
       section301Amount,
       section232Amount,

@@ -664,6 +664,102 @@
   line-height: 1.4;
 }
 
+/* Real import cost data (Census trade data) */
+.trade-data-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--slate-100);
+  border: 1px solid var(--slate-200);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.trade-data-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.trade-data-body .url-actions {
+  align-items: center;
+}
+
+.trade-data-body .url-actions input[type='text'] {
+  flex: 1;
+  min-width: 200px;
+  font-size: 14px;
+  padding: 9px 11px;
+  border: 1px solid var(--slate-300);
+  border-radius: 9px;
+  background: var(--white);
+  color: var(--navy-900);
+  outline: none;
+}
+
+.trade-data-body .url-actions input[type='text']:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+
+.hint-link {
+  align-self: flex-start;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.hint-link:hover {
+  text-decoration: underline;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--navy-800);
+  cursor: pointer;
+}
+
+.checkbox-label input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+}
+
+.source-tag {
+  margin-left: 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  vertical-align: middle;
+}
+
+.source-tag-real {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.source-tag-estimate {
+  background: var(--slate-200);
+  color: var(--slate-600);
+}
+
+.key-valid {
+  color: var(--success);
+  font-weight: 600;
+}
+
 /* Full ranking table */
 .all-countries {
   display: flex;

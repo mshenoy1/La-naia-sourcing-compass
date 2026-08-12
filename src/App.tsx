@@ -1,9 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { calculateLandedCosts } from './calculations';
+import {
+  fetchAverageDeclaredUnitValuesForCountries,
+  getStoredCensusApiKey,
+  setStoredCensusApiKey,
+  validateCensusApiKey,
+  type TradeDataResult,
+} from './censusTradeData';
 import { classifyProduct } from './htsClassifier';
 import { fetchProductDetails } from './productFetch';
-import { CATEGORY_PROFILES, DEFAULT_MARGIN_TARGET } from './tariffData';
-import type { FetchStatus, ProductCategoryId } from './types';
+import { CATEGORY_PROFILES, COUNTRY_PROFILES, DEFAULT_MARGIN_TARGET } from './tariffData';
+import type { FetchStatus, FirstCostSource, ProductCategoryId } from './types';
 import './App.css';
 
 const currency = (n: number) =>
@@ -28,6 +35,21 @@ function App() {
   const [showAllCountries, setShowAllCountries] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
+  const [censusApiKeyInput, setCensusApiKeyInput] = useState('');
+  const [censusApiKeyStored, setCensusApiKeyStored] = useState('');
+  const [useTradeData, setUseTradeData] = useState(true);
+  const [tradeDataStatus, setTradeDataStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [tradeDataError, setTradeDataError] = useState('');
+  const [tradeDataResults, setTradeDataResults] = useState<Record<string, TradeDataResult> | null>(null);
+  const [tradeDataHtsCode, setTradeDataHtsCode] = useState<string | null>(null);
+  const [keyValidation, setKeyValidation] = useState<{ status: 'idle' | 'checking' | 'valid' | 'invalid'; reason?: string }>({
+    status: 'idle',
+  });
+
+  useEffect(() => {
+    setCensusApiKeyStored(getStoredCensusApiKey());
+  }, []);
+
   const detailsVisible = fetchStatus === 'success' || fetchStatus === 'manual';
 
   const classification = useMemo(() => classifyProduct(title, description), [title, description]);
@@ -36,9 +58,13 @@ function App() {
     return CATEGORY_PROFILES.find((c) => c.id === categoryOverride) ?? classification.category;
   }, [categoryOverride, classification]);
 
-  // Reset any manual FOB-ratio override whenever the effective category changes.
+  // Reset any manual FOB-ratio override, and any looked-up trade data (now
+  // stale for a different HTS code), whenever the effective category changes.
   useEffect(() => {
     setFobRatioOverride(null);
+    setTradeDataResults(null);
+    setTradeDataStatus('idle');
+    setTradeDataHtsCode(null);
   }, [category.id]);
 
   const fobRatio = fobRatioOverride ?? category.defaultFobCostRatio;
@@ -48,10 +74,31 @@ function App() {
 
   const isValid = detailsVisible && title.trim().length > 0 && hasRetailPrice;
 
+  const firstCostByCountry = useMemo(() => {
+    if (!useTradeData || !tradeDataResults || tradeDataHtsCode !== category.representativeHtsCode) return undefined;
+    const map: Partial<Record<string, FirstCostSource>> = {};
+    for (const [code, result] of Object.entries(tradeDataResults)) {
+      if (result.ok) {
+        map[code] = {
+          amount: result.avgUnitValueUsd,
+          source: 'trade_data',
+          detail: `Real avg. declared US import cost — HTS ${result.htsCodeUsed} (${result.precision}), ${result.monthsUsed.length} mo. of US Customs data, ${Math.round(result.totalPieces).toLocaleString()} units`,
+        };
+      }
+    }
+    return map;
+  }, [useTradeData, tradeDataResults, tradeDataHtsCode, category.representativeHtsCode]);
+
   const results = useMemo(() => {
     if (!isValid) return [];
-    return calculateLandedCosts(firstCost, category, marginTarget, hasRetailPrice ? retailPrice : undefined);
-  }, [isValid, firstCost, category, marginTarget, hasRetailPrice, retailPrice]);
+    return calculateLandedCosts(
+      firstCost,
+      category,
+      marginTarget,
+      hasRetailPrice ? retailPrice : undefined,
+      firstCostByCountry,
+    );
+  }, [isValid, firstCost, category, marginTarget, hasRetailPrice, retailPrice, firstCostByCountry]);
 
   const topThree = results.slice(0, 3);
   const rest = results.slice(3);
@@ -85,6 +132,45 @@ function App() {
   const handleManualEntry = () => {
     setFetchError('');
     setFetchStatus('manual');
+  };
+
+  const handleSaveKey = async () => {
+    const trimmed = censusApiKeyInput.trim();
+    if (!trimmed) return;
+    setStoredCensusApiKey(trimmed);
+    setCensusApiKeyStored(trimmed);
+    setCensusApiKeyInput('');
+    setKeyValidation({ status: 'checking' });
+    const result = await validateCensusApiKey(trimmed);
+    setKeyValidation(result.valid ? { status: 'valid' } : { status: 'invalid', reason: result.reason });
+  };
+
+  const handleClearKey = () => {
+    setStoredCensusApiKey('');
+    setCensusApiKeyStored('');
+    setTradeDataResults(null);
+    setTradeDataStatus('idle');
+    setTradeDataHtsCode(null);
+    setKeyValidation({ status: 'idle' });
+  };
+
+  const handleLookupTradeData = async () => {
+    setTradeDataStatus('loading');
+    setTradeDataError('');
+    try {
+      const countryCodes = COUNTRY_PROFILES.map((c) => c.code);
+      const resultsMap = await fetchAverageDeclaredUnitValuesForCountries(
+        category.representativeHtsCode,
+        countryCodes,
+        censusApiKeyStored,
+      );
+      setTradeDataResults(resultsMap);
+      setTradeDataHtsCode(category.representativeHtsCode);
+      setTradeDataStatus('success');
+    } catch {
+      setTradeDataError('Failed to reach the Census trade data API. Try again.');
+      setTradeDataStatus('error');
+    }
   };
 
   const handleCalculate = (e: React.FormEvent) => {
@@ -232,6 +318,93 @@ function App() {
                 </div>
               </div>
 
+              <div className="trade-data-card">
+                <div className="classification-head">
+                  <span className="classification-label">Real Import Cost Data (optional)</span>
+                </div>
+                {!censusApiKeyStored ? (
+                  <div className="trade-data-body">
+                    <p className="hint">
+                      Look up the real average declared US Customs import cost for HTS {category.representativeHtsCode},
+                      per sourcing country, instead of the {category.defaultFobCostRatio}% category estimate above.
+                      Requires a free Census Bureau API key.
+                    </p>
+                    <div className="url-actions">
+                      <input
+                        type="text"
+                        placeholder="Paste your free Census API key"
+                        value={censusApiKeyInput}
+                        onChange={(e) => setCensusApiKeyInput(e.target.value)}
+                      />
+                      <button type="button" className="link-toggle" onClick={handleSaveKey} disabled={!censusApiKeyInput.trim()}>
+                        Save key
+                      </button>
+                    </div>
+                    <a
+                      className="hint-link"
+                      href="https://api.census.gov/data/key_signup.html"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Get a free key at api.census.gov →
+                    </a>
+                  </div>
+                ) : (
+                  <div className="trade-data-body">
+                    {keyValidation.status === 'checking' && <p className="hint">Checking key…</p>}
+                    {keyValidation.status === 'valid' && <p className="hint key-valid">✓ Key looks valid.</p>}
+                    {keyValidation.status === 'invalid' && (
+                      <p className="form-error">
+                        {keyValidation.reason ?? 'This key looks invalid.'} Remove it below and try pasting it again.
+                      </p>
+                    )}
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={useTradeData}
+                        onChange={(e) => setUseTradeData(e.target.checked)}
+                      />
+                      Use real import data for first cost when available
+                    </label>
+                    <div className="url-actions">
+                      <button
+                        type="button"
+                        className="link-toggle"
+                        onClick={handleLookupTradeData}
+                        disabled={tradeDataStatus === 'loading'}
+                      >
+                        {tradeDataStatus === 'loading'
+                          ? 'Looking up US Customs import data… (can take up to 20s)'
+                          : `🔍 Look up HTS ${category.representativeHtsCode} across 9 countries`}
+                      </button>
+                      <button type="button" className="hint-link" onClick={handleClearKey}>
+                        Remove key
+                      </button>
+                    </div>
+                    {tradeDataStatus === 'success' &&
+                      tradeDataResults &&
+                      (Object.values(tradeDataResults).some((r) => !r.ok && r.keyInvalid) ? (
+                        <p className="form-error">
+                          Census rejected this API key. Click "Remove key" above and paste a fresh one.
+                        </p>
+                      ) : (
+                        <p className="hint">
+                          {Object.values(tradeDataResults).filter((r) => r.ok).length} of{' '}
+                          {Object.keys(tradeDataResults).length} countries matched real US import records for this
+                          HTS code (trailing months of Census import statistics). The rest fall back to the category
+                          estimate.
+                        </p>
+                      ))}
+                    {tradeDataStatus === 'error' && <p className="form-error">{tradeDataError}</p>}
+                    <p className="hint">
+                      This is a population-wide average (total declared value ÷ total quantity) across all US
+                      imports under this HTS code from each country — public customs statistics don't publish
+                      individual shipment records or let you filter by price tier.
+                    </p>
+                  </div>
+                )}
+              </div>
+
               <button
                 type="button"
                 className="link-toggle"
@@ -292,8 +465,11 @@ function App() {
               </h2>
               <p>
                 HTS {category.representativeHtsCode} ({category.label}) · Retail price {currency(retailPrice)} ·
-                First cost {fobRatio}% ({currency(firstCost)}) · Margin target {marginTarget}% · Ranked out of{' '}
-                {results.length} sourcing countries
+                Default first cost {fobRatio}% ({currency(firstCost)}
+                {firstCostByCountry && Object.keys(firstCostByCountry).length > 0
+                  ? ` — ${Object.keys(firstCostByCountry).length} of ${results.length} countries use real US import data instead, see below`
+                  : ''}
+                ) · Margin target {marginTarget}% · Ranked out of {results.length} sourcing countries
               </p>
             </div>
 
@@ -326,8 +502,15 @@ function App() {
                   <div className="breakdown">
                     <h4>Cost Breakdown</h4>
                     <ul>
-                      <li>
-                        <span>First cost (FOB)</span>
+                      <li title={r.fobCostDetail}>
+                        <span>
+                          First cost (FOB)
+                          {r.fobCostSource === 'trade_data' ? (
+                            <span className="source-tag source-tag-real">real US import data</span>
+                          ) : (
+                            <span className="source-tag source-tag-estimate">estimated</span>
+                          )}
+                        </span>
                         <span>{currency(r.fobCost)}</span>
                       </li>
                       {r.tariffLines.map((line) => (

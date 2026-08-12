@@ -449,3 +449,21 @@ export const WEIGHT_CLASS_FREIGHT_MULTIPLIER: Record<CategoryProfile['weightClas
 
 export const DEFAULT_FOB_COST_RATIO = 28; // fallback FOB unit cost as % of retail price
 export const DEFAULT_MARGIN_TARGET = 60; // %
+
+/**
+ * US Census Bureau Schedule C country codes, verified against
+ * census.gov/foreign-trade/schedules/c/country.txt. Used to query the
+ * Census International Trade API (api.census.gov) for real declared import
+ * statistics by HTS code + country + month.
+ */
+export const CENSUS_COUNTRY_CODES: Record<string, string> = {
+  CN: '5700',
+  VN: '5520',
+  IN: '5330',
+  BD: '5380',
+  ID: '5600',
+  KH: '5550',
+  MX: '2010',
+  TW: '5830',
+  TR: '4890',
+};
