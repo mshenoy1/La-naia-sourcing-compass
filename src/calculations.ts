@@ -19,7 +19,8 @@ export function calculateLandedCosts(
   retailPrice?: number,
 ): CalculatedResult[] {
   const results = COUNTRY_PROFILES.map((country) => {
-    const mfnAmount = firstCost * (category.mfnRate / 100);
+    const effectiveMfnRate = country.ftaDutyFree ? 0 : category.mfnRate;
+    const mfnAmount = firstCost * (effectiveMfnRate / 100);
 
     const section301Amount = firstCost * (country.section301Rate / 100);
 
@@ -40,7 +41,7 @@ export function calculateLandedCosts(
     const totalTariffAmount =
       mfnAmount + section301Amount + section232Amount + adCvdAmount + reciprocalTariffAmount + forcedLaborAmount;
     const totalTariffRate =
-      category.mfnRate +
+      effectiveMfnRate +
       country.section301Rate +
       (section232Applicable ? category.section232Rate : 0) +
       adCvdRate +
@@ -52,7 +53,12 @@ export function calculateLandedCosts(
     const marginPct = retailPrice && retailPrice > 0 ? (grossProfit / retailPrice) * 100 : 0;
 
     const tariffLines: TariffLineItem[] = [
-      { label: 'MFN duty', rate: category.mfnRate, amount: mfnAmount },
+      {
+        label: 'MFN duty',
+        rate: effectiveMfnRate,
+        amount: mfnAmount,
+        note: country.ftaDutyFree ? `Duty-free assumed under FTA (${country.name} rules-of-origin compliance assumed)` : undefined,
+      },
       {
         label: country.section301Label,
         rate: country.section301Rate,

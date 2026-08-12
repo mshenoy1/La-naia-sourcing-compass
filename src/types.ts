@@ -53,6 +53,13 @@ export interface CountryProfile {
   /** Whether this country is exempt from Section 232 steel/aluminum tariffs (e.g. negotiated quota) */
   section232Exempt: boolean;
   section232ExemptNote?: string;
+  /**
+   * Whether goods from this country are assumed to qualify for a US free-trade
+   * agreement (e.g. USMCA). When true, MFN duty is treated as 0% — FTA
+   * rules-of-origin compliance is assumed, not verified. Section 232, AD/CVD
+   * and any reciprocal tariff still apply independently of FTA status.
+   */
+  ftaDutyFree: boolean;
   /** Risk-adjusted cost of forced-labor compliance (UFLPA-style detention/rerouting exposure), % of FOB value */
   forcedLaborRiskRate: number;
   /** Base ocean/air freight & inbound logistics, % of FOB value, before weight-class multiplier */
