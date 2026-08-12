@@ -42,7 +42,10 @@ function App() {
   const [tradeDataError, setTradeDataError] = useState('');
   const [tradeDataResults, setTradeDataResults] = useState<Record<string, TradeDataResult> | null>(null);
   const [tradeDataHtsCode, setTradeDataHtsCode] = useState<string | null>(null);
-  const [keyValidation, setKeyValidation] = useState<{ status: 'idle' | 'checking' | 'valid' | 'invalid'; reason?: string }>({
+  const [keyValidation, setKeyValidation] = useState<{
+    status: 'idle' | 'checking' | 'valid' | 'invalid' | 'unreachable';
+    reason?: string;
+  }>({
     status: 'idle',
   });
 
@@ -142,7 +145,11 @@ function App() {
     setCensusApiKeyInput('');
     setKeyValidation({ status: 'checking' });
     const result = await validateCensusApiKey(trimmed);
-    setKeyValidation(result.valid ? { status: 'valid' } : { status: 'invalid', reason: result.reason });
+    if (result.valid) {
+      setKeyValidation({ status: 'valid' });
+    } else {
+      setKeyValidation({ status: result.keyInvalid ? 'invalid' : 'unreachable', reason: result.reason });
+    }
   };
 
   const handleClearKey = () => {
@@ -358,6 +365,7 @@ function App() {
                         {keyValidation.reason ?? 'This key looks invalid.'} Remove it below and try pasting it again.
                       </p>
                     )}
+                    {keyValidation.status === 'unreachable' && <p className="form-error">{keyValidation.reason}</p>}
                     <label className="checkbox-label">
                       <input
                         type="checkbox"
@@ -374,7 +382,7 @@ function App() {
                         disabled={tradeDataStatus === 'loading'}
                       >
                         {tradeDataStatus === 'loading'
-                          ? 'Looking up US Customs import data… (can take up to 20s)'
+                          ? 'Looking up US Customs import data… (the free proxy can be slow — up to ~40s)'
                           : `🔍 Look up HTS ${category.representativeHtsCode} across 9 countries`}
                       </button>
                       <button type="button" className="hint-link" onClick={handleClearKey}>
@@ -386,6 +394,11 @@ function App() {
                       (Object.values(tradeDataResults).some((r) => !r.ok && r.keyInvalid) ? (
                         <p className="form-error">
                           Census rejected this API key. Click "Remove key" above and paste a fresh one.
+                        </p>
+                      ) : Object.values(tradeDataResults).some((r) => !r.ok && r.keyInvalid === false) ? (
+                        <p className="form-error">
+                          The free CORS proxy is having trouble reaching Census right now. Your key is likely fine —
+                          click "Look up" again in a moment.
                         </p>
                       ) : (
                         <p className="hint">

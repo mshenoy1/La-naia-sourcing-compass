@@ -98,17 +98,25 @@ async function fetchViaProxyOnce(url: string, timeoutMs: number): Promise<string
   }
 }
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 /**
  * The free public CORS proxy is noticeably flaky in practice (observed
- * intermittent 500s, 408s and timeouts unrelated to Census itself), so
- * retry once before treating a request as failed.
+ * intermittent 500s, 502s, 520/522s, 408s and timeouts unrelated to Census
+ * itself — often clearing up within a few seconds). Retry several times
+ * with a short backoff before treating a request as failed.
  */
-async function fetchViaProxy(url: string, timeoutMs: number): Promise<string> {
-  try {
-    return await fetchViaProxyOnce(url, timeoutMs);
-  } catch {
-    return await fetchViaProxyOnce(url, timeoutMs);
+async function fetchViaProxy(url: string, timeoutMs: number, attempts = 3): Promise<string> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    if (attempt > 0) await sleep(600 * attempt);
+    try {
+      return await fetchViaProxyOnce(url, timeoutMs);
+    } catch (err) {
+      lastError = err;
+    }
   }
+  throw lastError;
 }
 
 /**
@@ -125,19 +133,26 @@ function isErrorPage(text: string): boolean {
  * commodity chapter, used to fail fast on a bad key instead of burning
  * through dozens of per-HTS-code, per-country, per-month requests first.
  */
-export async function validateCensusApiKey(apiKey: string): Promise<{ valid: boolean; reason?: string }> {
-  if (!apiKey.trim()) return { valid: false, reason: 'No API key provided.' };
+export async function validateCensusApiKey(
+  apiKey: string,
+): Promise<{ valid: boolean; reason?: string; keyInvalid?: boolean }> {
+  if (!apiKey.trim()) return { valid: false, reason: 'No API key provided.', keyInvalid: true };
   const [month] = recentMonths(1, START_OFFSET_MONTHS);
   const url = buildUrl({ get: 'GEN_VAL_MO', COMM_LVL: 'HS2', I_COMMODITY: '61', time: month }, apiKey);
   try {
     const text = await fetchViaProxy(url, FETCH_TIMEOUT_MS);
     if (isErrorPage(text)) {
-      return { valid: false, reason: 'Census rejected this API key as invalid.' };
+      return { valid: false, reason: 'Census rejected this API key as invalid.', keyInvalid: true };
     }
     JSON.parse(text);
     return { valid: true };
   } catch {
-    return { valid: false, reason: 'Could not reach the Census trade data API to validate the key — try again.' };
+    return {
+      valid: false,
+      keyInvalid: false,
+      reason:
+        'The free CORS proxy this app relies on is having trouble reaching Census right now (it\'s often intermittent — retried 3 times already). Your key is likely fine — try "Look up" again in a moment.',
+    };
   }
 }
 
@@ -319,7 +334,7 @@ export async function fetchAverageDeclaredUnitValuesForCountries(
     const failure: TradeDataFailure = {
       ok: false,
       reason: validation.reason ?? 'Invalid Census API key.',
-      keyInvalid: true,
+      keyInvalid: validation.keyInvalid ?? true,
     };
     return Object.fromEntries(countryCodes.map((cc) => [cc, failure]));
   }
