@@ -44,20 +44,32 @@ export interface CountryProfile {
   code: string;
   name: string;
   flag: string;
-  /** Section 301 (China-only trade action), % of FOB value */
+  /** Section 301 (China-only legacy 2018 List 1-4 tariff action), % of FOB value */
   section301Rate: number;
   section301Label: string;
-  /** Reciprocal / IEEPA country-level trade tariff, % of FOB value */
-  reciprocalTariffRate: number;
-  reciprocalTariffLabel: string;
+  /**
+   * Section 301 Forced-Labor Prevention Tariff (permanent duty structure that
+   * replaced the invalidated IEEPA "reciprocal" tariffs, effective July 24,
+   * 2026): 10% for economies with a recognized forced-labor import
+   * prohibition, 12.5% for the rest. % of FOB value, before exemptions.
+   */
+  forcedLaborTariffRate: number;
+  forcedLaborTariffLabel: string;
   /** Whether this country is exempt from Section 232 steel/aluminum tariffs (e.g. negotiated quota) */
   section232Exempt: boolean;
   section232ExemptNote?: string;
   /**
+   * Taiwan-only rule: the combined MFN + forced-labor tariff rate is capped
+   * at this value rather than stacking additively. Undefined for all other
+   * countries.
+   */
+  combinedMfnCapRate?: number;
+  /**
    * Whether goods from this country are assumed to qualify for a US free-trade
-   * agreement (e.g. USMCA). When true, MFN duty is treated as 0% — FTA
-   * rules-of-origin compliance is assumed, not verified. Section 232, AD/CVD
-   * and any reciprocal tariff still apply independently of FTA status.
+   * agreement (e.g. USMCA). When true, MFN duty and the Section 301
+   * forced-labor tariff are both treated as 0% — FTA rules-of-origin
+   * compliance is assumed, not verified. Section 232 and AD/CVD still apply
+   * independently of FTA status.
    */
   ftaDutyFree: boolean;
   /** Risk-adjusted cost of forced-labor compliance (UFLPA-style detention/rerouting exposure), % of FOB value */
@@ -98,8 +110,8 @@ export interface CalculatedResult extends CountryProfile {
   adCvdAmount: number;
   adCvdRate: number;
   adCvdNote: string;
-  reciprocalTariffAmount: number;
-  forcedLaborAmount: number;
+  forcedLaborTariffAmount: number;
+  forcedLaborRiskAmount: number;
   totalTariffAmount: number;
   totalTariffRate: number;
   freightRate: number;

@@ -1,14 +1,26 @@
 import type { AdCvdRule, CategoryProfile, CountryProfile } from './types';
 
 /**
- * Illustrative reference data as of August 2026. HTS codes, MFN duty rates,
- * Section 301/232 exposure, AD/CVD flags, reciprocal/IEEPA tariff rates and
- * freight figures below are representative, blended estimates for teaching
- * and screening purposes — NOT an official customs ruling. Actual duty
- * depends on the exact 10-digit HTS classification, country-of-origin rules,
- * and any active trade-remedy orders. Always confirm with a licensed customs
- * broker, a formal HTS binding ruling (CBP CROSS), and the current AD/CVD
- * order list (access.trade.gov) before making sourcing decisions.
+ * Reference data as of August 2026, focused on the US import market.
+ *
+ * Legal backdrop: the Supreme Court struck down the IEEPA "reciprocal"
+ * tariffs on February 20, 2026. The administration's stopgap Section 122
+ * global tariff was itself invalidated by the Court of International Trade
+ * and expired July 24, 2026. The permanent structure now in place is a
+ * two-tier Section 301 "forced-labor prevention" tariff — 10% for economies
+ * USTR recognizes as having a forced-labor import prohibition, 12.5% for the
+ * rest — layered under duties that were never IEEPA-based and are
+ * unaffected: standard MFN duty, the original 2018 Section 301 China List
+ * 1-4 action, Section 232 (steel/aluminum/copper — 50% on primary metal, 25%
+ * on derivative/finished articles), and AD/CVD orders. Goods already subject
+ * to Section 232 are exempt from the new forced-labor tariff to avoid
+ * double-stacking. HTS codes, duty rates, AD/CVD flags and freight figures
+ * below are representative, blended estimates for teaching and screening
+ * purposes — NOT an official customs ruling. Actual duty depends on the
+ * exact 10-digit HTS classification, country-of-origin rules, and any active
+ * trade-remedy orders. Always confirm with a licensed customs broker, a
+ * formal HTS binding ruling (CBP CROSS), and the current AD/CVD order list
+ * (access.trade.gov) before making sourcing decisions.
  */
 export const CATEGORY_PROFILES: CategoryProfile[] = [
   {
@@ -224,9 +236,9 @@ export const COUNTRY_PROFILES: CountryProfile[] = [
     name: 'China',
     flag: '🇨🇳',
     section301Rate: 25.0,
-    section301Label: 'Section 301 (China Tariff)',
-    reciprocalTariffRate: 10.0,
-    reciprocalTariffLabel: 'Reciprocal / IEEPA Trade Tariff',
+    section301Label: 'Section 301 (2018 China Tariff, List 1–4)',
+    forcedLaborTariffRate: 12.5,
+    forcedLaborTariffLabel: 'Section 301 Forced-Labor Prevention Tariff (2026)',
     section232Exempt: false,
     ftaDutyFree: false,
     forcedLaborRiskRate: 4.0,
@@ -236,7 +248,7 @@ export const COUNTRY_PROFILES: CountryProfile[] = [
     moqUnits: 500,
     risks: [
       'UFLPA detention risk for cotton, polysilicon & Xinjiang-linked inputs',
-      'Ongoing Section 301 / IEEPA tariff volatility',
+      'Stacked Section 301 exposure: legacy List 1–4 duty plus the 2026 forced-labor tariff',
       'IP protection & factory-audit concerns',
     ],
     notes: 'Deepest manufacturing base and fastest sampling, offset by the highest combined tariff stack.',
@@ -246,9 +258,9 @@ export const COUNTRY_PROFILES: CountryProfile[] = [
     name: 'Vietnam',
     flag: '🇻🇳',
     section301Rate: 0,
-    section301Label: 'Section 301 (China Tariff)',
-    reciprocalTariffRate: 20.0,
-    reciprocalTariffLabel: 'Reciprocal / Trade-Deal Tariff',
+    section301Label: 'Section 301 (2018 China Tariff, List 1–4)',
+    forcedLaborTariffRate: 12.5,
+    forcedLaborTariffLabel: 'Section 301 Forced-Labor Prevention Tariff (2026)',
     section232Exempt: false,
     ftaDutyFree: false,
     forcedLaborRiskRate: 2.0,
@@ -256,21 +268,22 @@ export const COUNTRY_PROFILES: CountryProfile[] = [
     leadTimeDaysMin: 35,
     leadTimeDaysMax: 50,
     moqUnits: 1000,
+    ftaNote: 'USTR placed Vietnam in the 12.5% tier — no recognized forced-labor import prohibition yet.',
     risks: [
       'Transshipment scrutiny on goods with Chinese-origin inputs',
       'Factory capacity strain as buyers shift volume from China',
       'Higher MOQs at established tier-1 factories',
     ],
-    notes: 'Balanced middle ground — moderate tariffs, growing capacity, but MOQs run higher.',
+    notes: 'Balanced middle ground — solid capacity and no legacy 301 exposure, but MOQs run higher.',
   },
   {
     code: 'IN',
     name: 'India',
     flag: '🇮🇳',
     section301Rate: 0,
-    section301Label: 'Section 301 (China Tariff)',
-    reciprocalTariffRate: 15.0,
-    reciprocalTariffLabel: 'Reciprocal / Trade-Deal Tariff',
+    section301Label: 'Section 301 (2018 China Tariff, List 1–4)',
+    forcedLaborTariffRate: 10.0,
+    forcedLaborTariffLabel: 'Section 301 Forced-Labor Prevention Tariff (2026)',
     section232Exempt: false,
     ftaDutyFree: false,
     forcedLaborRiskRate: 0.5,
@@ -278,6 +291,7 @@ export const COUNTRY_PROFILES: CountryProfile[] = [
     leadTimeDaysMin: 45,
     leadTimeDaysMax: 60,
     moqUnits: 300,
+    ftaNote: 'USTR recognizes a forced-labor import prohibition — qualifies for the lower 10% tier.',
     risks: [
       'Port congestion & inland logistics variability',
       'Quality consistency across smaller/mid-tier factories',
@@ -290,9 +304,9 @@ export const COUNTRY_PROFILES: CountryProfile[] = [
     name: 'Bangladesh',
     flag: '🇧🇩',
     section301Rate: 0,
-    section301Label: 'Section 301 (China Tariff)',
-    reciprocalTariffRate: 15.0,
-    reciprocalTariffLabel: 'Reciprocal / Trade-Deal Tariff',
+    section301Label: 'Section 301 (2018 China Tariff, List 1–4)',
+    forcedLaborTariffRate: 10.0,
+    forcedLaborTariffLabel: 'Section 301 Forced-Labor Prevention Tariff (2026)',
     section232Exempt: false,
     ftaDutyFree: false,
     forcedLaborRiskRate: 1.5,
@@ -300,7 +314,7 @@ export const COUNTRY_PROFILES: CountryProfile[] = [
     leadTimeDaysMin: 45,
     leadTimeDaysMax: 65,
     moqUnits: 2000,
-    ftaNote: 'GSP duty-free program currently lapsed — standard MFN applies.',
+    ftaNote: 'GSP duty-free program currently lapsed — standard MFN applies. Qualifies for the lower 10% forced-labor tier.',
     risks: [
       'Grid power reliability & port infrastructure gaps',
       'Very high MOQs outside apparel megafactories',
@@ -313,9 +327,9 @@ export const COUNTRY_PROFILES: CountryProfile[] = [
     name: 'Indonesia',
     flag: '🇮🇩',
     section301Rate: 0,
-    section301Label: 'Section 301 (China Tariff)',
-    reciprocalTariffRate: 19.0,
-    reciprocalTariffLabel: 'Reciprocal / Trade-Deal Tariff',
+    section301Label: 'Section 301 (2018 China Tariff, List 1–4)',
+    forcedLaborTariffRate: 10.0,
+    forcedLaborTariffLabel: 'Section 301 Forced-Labor Prevention Tariff (2026)',
     section232Exempt: false,
     ftaDutyFree: false,
     forcedLaborRiskRate: 1.0,
@@ -323,21 +337,22 @@ export const COUNTRY_PROFILES: CountryProfile[] = [
     leadTimeDaysMin: 40,
     leadTimeDaysMax: 55,
     moqUnits: 1000,
+    ftaNote: 'USTR recognizes a forced-labor import prohibition — qualifies for the lower 10% tier.',
     risks: [
       'Fragmented archipelago logistics between production & port',
       'Smaller footprint in electronics/hard goods',
       'Currency volatility versus USD',
     ],
-    notes: 'Growing footwear/furniture base with a moderate tariff stack.',
+    notes: 'Growing footwear/furniture base with a favorable forced-labor tariff tier.',
   },
   {
     code: 'KH',
     name: 'Cambodia',
     flag: '🇰🇭',
     section301Rate: 0,
-    section301Label: 'Section 301 (China Tariff)',
-    reciprocalTariffRate: 19.0,
-    reciprocalTariffLabel: 'Reciprocal / Trade-Deal Tariff',
+    section301Label: 'Section 301 (2018 China Tariff, List 1–4)',
+    forcedLaborTariffRate: 10.0,
+    forcedLaborTariffLabel: 'Section 301 Forced-Labor Prevention Tariff (2026)',
     section232Exempt: false,
     ftaDutyFree: false,
     forcedLaborRiskRate: 2.5,
@@ -345,21 +360,22 @@ export const COUNTRY_PROFILES: CountryProfile[] = [
     leadTimeDaysMin: 40,
     leadTimeDaysMax: 55,
     moqUnits: 1500,
+    ftaNote: 'USTR recognizes a forced-labor import prohibition — qualifies for the lower 10% tier.',
     risks: [
       'Elevated transshipment/rules-of-origin scrutiny',
       'Shallow supplier base outside apparel & travel goods',
-      'Higher forced-labor compliance monitoring burden',
+      'Higher UFLPA-style compliance monitoring burden despite the favorable tariff tier',
     ],
-    notes: 'Low labor cost apparel/bags hub, but faces heavier transshipment scrutiny than peers.',
+    notes: 'Low labor cost apparel/bags hub with a favorable forced-labor tariff tier, offset by transshipment scrutiny.',
   },
   {
     code: 'MX',
     name: 'Mexico',
     flag: '🇲🇽',
     section301Rate: 0,
-    section301Label: 'Section 301 (China Tariff)',
-    reciprocalTariffRate: 0,
-    reciprocalTariffLabel: 'Reciprocal / Trade-Deal Tariff',
+    section301Label: 'Section 301 (2018 China Tariff, List 1–4)',
+    forcedLaborTariffRate: 10.0,
+    forcedLaborTariffLabel: 'Section 301 Forced-Labor Prevention Tariff (2026)',
     section232Exempt: true,
     section232ExemptNote: 'USMCA steel/aluminum tariff-rate quota arrangement — verify your volume against the negotiated quota.',
     ftaDutyFree: true,
@@ -368,7 +384,7 @@ export const COUNTRY_PROFILES: CountryProfile[] = [
     leadTimeDaysMin: 10,
     leadTimeDaysMax: 20,
     moqUnits: 250,
-    ftaNote: 'USMCA duty-free assumed: 0% MFN and 0% reciprocal tariff, on the assumption that goods meet USMCA rules of origin.',
+    ftaNote: 'USMCA duty-free assumed: 0% MFN and 0% Section 301 forced-labor tariff, on the assumption that goods meet USMCA rules of origin.',
     risks: [
       'Rules-of-origin documentation burden to actually qualify for USMCA',
       'Narrower manufacturing base for some product categories',
@@ -381,20 +397,22 @@ export const COUNTRY_PROFILES: CountryProfile[] = [
     name: 'Taiwan',
     flag: '🇹🇼',
     section301Rate: 0,
-    section301Label: 'Section 301 (China Tariff)',
-    reciprocalTariffRate: 20.0,
-    reciprocalTariffLabel: 'Reciprocal / Trade-Deal Tariff',
+    section301Label: 'Section 301 (2018 China Tariff, List 1–4)',
+    forcedLaborTariffRate: 10.0,
+    forcedLaborTariffLabel: 'Section 301 Forced-Labor Prevention Tariff (2026)',
     section232Exempt: false,
+    combinedMfnCapRate: 10,
     ftaDutyFree: false,
     forcedLaborRiskRate: 0.5,
     freightBaseRate: 5.5,
     leadTimeDaysMin: 25,
     leadTimeDaysMax: 40,
     moqUnits: 500,
+    ftaNote: 'Taiwan-specific rule: combined MFN duty + forced-labor tariff is capped at 10% rather than stacking.',
     risks: [
       'Higher labor & overhead cost than mainland Southeast Asia',
       'Geopolitical/shipping-lane risk in the Taiwan Strait',
-      'Capacity concentrated in electronics & precision components',
+      'Capacity concentrated in electronics & precision components — watch Section 232 semiconductor tariff exposure',
     ],
     notes: 'Strong fit for electronics/precision goods with low compliance risk, at a higher cost base.',
   },
@@ -403,9 +421,9 @@ export const COUNTRY_PROFILES: CountryProfile[] = [
     name: 'Turkey',
     flag: '🇹🇷',
     section301Rate: 0,
-    section301Label: 'Section 301 (China Tariff)',
-    reciprocalTariffRate: 15.0,
-    reciprocalTariffLabel: 'Reciprocal / Trade-Deal Tariff',
+    section301Label: 'Section 301 (2018 China Tariff, List 1–4)',
+    forcedLaborTariffRate: 12.5,
+    forcedLaborTariffLabel: 'Section 301 Forced-Labor Prevention Tariff (2026)',
     section232Exempt: false,
     ftaDutyFree: false,
     forcedLaborRiskRate: 1.0,
@@ -413,6 +431,7 @@ export const COUNTRY_PROFILES: CountryProfile[] = [
     leadTimeDaysMin: 30,
     leadTimeDaysMax: 45,
     moqUnits: 1000,
+    ftaNote: 'USTR found no qualifying forced-labor import ban — placed in the 12.5% tier.',
     risks: [
       'AD/CVD exposure on select steel products',
       'Currency volatility versus USD',

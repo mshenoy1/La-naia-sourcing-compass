@@ -12,6 +12,32 @@ function getForcedLaborRiskRate(category: CategoryProfile, country: CountryProfi
   return country.forcedLaborRiskRate;
 }
 
+/**
+ * Section 301 Forced-Labor Prevention Tariff (2026), with its documented
+ * exemptions/interactions applied in order:
+ * 1. FTA-qualifying goods (assumed compliant) are exempt.
+ * 2. Goods already subject to Section 232 are exempt (avoids double-stacking).
+ * 3. Taiwan: combined MFN + this tariff is capped rather than additive.
+ * 4. Otherwise, the country's standard tier rate (10% or 12.5%) applies.
+ */
+function getForcedLaborTariffRate(
+  country: CountryProfile,
+  section232Applicable: boolean,
+  effectiveMfnRate: number,
+): { rate: number; note?: string } {
+  if (country.ftaDutyFree) {
+    return { rate: 0, note: 'FTA-qualifying goods assumed exempt' };
+  }
+  if (section232Applicable) {
+    return { rate: 0, note: 'Exempt — already subject to Section 232 national-security tariff' };
+  }
+  if (country.combinedMfnCapRate != null) {
+    const capped = Math.max(0, country.combinedMfnCapRate - effectiveMfnRate);
+    return { rate: capped, note: `Combined MFN + forced-labor tariff capped at ${country.combinedMfnCapRate}%` };
+  }
+  return { rate: country.forcedLaborTariffRate };
+}
+
 export function calculateLandedCosts(
   firstCost: number,
   category: CategoryProfile,
@@ -30,22 +56,27 @@ export function calculateLandedCosts(
     const { rate: adCvdRate, note: adCvdNote } = getAdCvd(category, country);
     const adCvdAmount = firstCost * (adCvdRate / 100);
 
-    const reciprocalTariffAmount = firstCost * (country.reciprocalTariffRate / 100);
+    const { rate: forcedLaborTariffRate, note: forcedLaborTariffNote } = getForcedLaborTariffRate(
+      country,
+      section232Applicable,
+      effectiveMfnRate,
+    );
+    const forcedLaborTariffAmount = firstCost * (forcedLaborTariffRate / 100);
 
     const forcedLaborRiskRate = getForcedLaborRiskRate(category, country);
-    const forcedLaborAmount = firstCost * (forcedLaborRiskRate / 100);
+    const forcedLaborRiskAmount = firstCost * (forcedLaborRiskRate / 100);
 
     const freightRate = country.freightBaseRate * WEIGHT_CLASS_FREIGHT_MULTIPLIER[category.weightClass];
     const freightAmount = firstCost * (freightRate / 100);
 
     const totalTariffAmount =
-      mfnAmount + section301Amount + section232Amount + adCvdAmount + reciprocalTariffAmount + forcedLaborAmount;
+      mfnAmount + section301Amount + section232Amount + adCvdAmount + forcedLaborTariffAmount + forcedLaborRiskAmount;
     const totalTariffRate =
       effectiveMfnRate +
       country.section301Rate +
       (section232Applicable ? category.section232Rate : 0) +
       adCvdRate +
-      country.reciprocalTariffRate +
+      forcedLaborTariffRate +
       forcedLaborRiskRate;
 
     const landedCost = firstCost + totalTariffAmount + freightAmount;
@@ -66,7 +97,7 @@ export function calculateLandedCosts(
         note: country.section301Rate === 0 ? 'Not applicable (China-origin only)' : undefined,
       },
       {
-        label: 'Section 232 (steel/aluminum)',
+        label: 'Section 232 (steel/aluminum/copper)',
         rate: section232Applicable ? category.section232Rate : 0,
         amount: section232Amount,
         note: !category.section232
@@ -76,12 +107,17 @@ export function calculateLandedCosts(
             : undefined,
       },
       { label: 'Antidumping / Countervailing (AD/CVD)', rate: adCvdRate, amount: adCvdAmount, note: adCvdNote },
-      { label: country.reciprocalTariffLabel, rate: country.reciprocalTariffRate, amount: reciprocalTariffAmount },
       {
-        label: 'Forced-labor compliance risk',
+        label: country.forcedLaborTariffLabel,
+        rate: forcedLaborTariffRate,
+        amount: forcedLaborTariffAmount,
+        note: forcedLaborTariffNote,
+      },
+      {
+        label: 'UFLPA compliance risk (detention/rerouting)',
         rate: forcedLaborRiskRate,
-        amount: forcedLaborAmount,
-        note: 'Risk-adjusted expected cost of UFLPA-style detention/rerouting, not a filed duty',
+        amount: forcedLaborRiskAmount,
+        note: 'Risk-adjusted expected cost of shipment detention/rerouting exposure, not a filed duty',
       },
     ];
 
@@ -94,8 +130,8 @@ export function calculateLandedCosts(
       adCvdAmount,
       adCvdRate,
       adCvdNote,
-      reciprocalTariffAmount,
-      forcedLaborAmount,
+      forcedLaborTariffAmount,
+      forcedLaborRiskAmount,
       totalTariffAmount,
       totalTariffRate,
       freightRate,
