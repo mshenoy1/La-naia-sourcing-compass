@@ -31,6 +31,44 @@ export interface TradeDataFailure {
 
 export type TradeDataResult = TradeDataSuccess | TradeDataFailure;
 
+const MONTH_LABELS = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
+function formatMonth(ym: string): string {
+  const [year, month] = ym.split('-');
+  const idx = Number(month) - 1;
+  return `${MONTH_LABELS[idx] ?? month} ${year}`;
+}
+
+/** Human-readable month range, e.g. "Apr–Jun 2026" or "Jun 2026" for a single month. Assumes monthsUsed is sorted. */
+export function formatMonthRange(monthsUsed: string[]): string {
+  if (monthsUsed.length === 0) return 'no months';
+  if (monthsUsed.length === 1) return formatMonth(monthsUsed[0]);
+  const first = monthsUsed[0];
+  const last = monthsUsed[monthsUsed.length - 1];
+  const [firstYear, firstMonthNum] = first.split('-');
+  const [lastYear, lastMonthNum] = last.split('-');
+  const firstLabel = MONTH_LABELS[Number(firstMonthNum) - 1] ?? firstMonthNum;
+  const lastLabel = MONTH_LABELS[Number(lastMonthNum) - 1] ?? lastMonthNum;
+  return firstYear === lastYear
+    ? `${firstLabel}–${lastLabel} ${lastYear}`
+    : `${firstLabel} ${firstYear}–${lastLabel} ${lastYear}`;
+}
+
+/**
+ * Countries can independently fall back to an older window when recent
+ * months fail to fetch (proxy flakiness), which silently makes a
+ * cross-country cost comparison apples-to-oranges. Detects when the
+ * successful results don't all share the same month window.
+ */
+export function tradeDataWindowsMismatch(results: Record<string, TradeDataResult>): boolean {
+  const windows = Object.values(results)
+    .filter((r): r is TradeDataSuccess => r.ok)
+    .map((r) => r.monthsUsed.join(','));
+  return new Set(windows).size > 1;
+}
+
 const STORAGE_KEY = 'sourcingCompass.censusApiKey';
 
 /**
@@ -269,6 +307,11 @@ async function lookupAtPrecision(
     // Reported by weight/volume (e.g. KG) — can't derive a per-piece cost from this.
     return null;
   }
+
+  // Months resolve in parallel, so they can land out of order; sort
+  // chronologically ('YYYY-MM' sorts correctly as a string) so callers can
+  // trust monthsUsed[0]/[monthsUsed.length-1] as the actual range.
+  acc.monthsUsed.sort();
 
   const totalPieces = acc.totalQty * piecesPerUnit;
   return {

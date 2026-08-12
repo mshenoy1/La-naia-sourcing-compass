@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { calculateLandedCosts } from './calculations';
 import {
   fetchAverageDeclaredUnitValuesForCountries,
+  formatMonthRange,
   getStoredCensusApiKey,
   setStoredCensusApiKey,
+  tradeDataWindowsMismatch,
   validateCensusApiKey,
   type TradeDataResult,
 } from './censusTradeData';
@@ -85,7 +87,7 @@ function App() {
         map[code] = {
           amount: result.avgUnitValueUsd,
           source: 'trade_data',
-          detail: `Real avg. declared US import cost — HTS ${result.htsCodeUsed} (${result.precision}), ${result.monthsUsed.length} mo. of US Customs data, ${Math.round(result.totalPieces).toLocaleString()} units`,
+          detail: `Real avg. declared US import cost — HTS ${result.htsCodeUsed} (${result.precision}), ${formatMonthRange(result.monthsUsed)} (${result.monthsUsed.length} mo.), ${Math.round(result.totalPieces).toLocaleString()} units`,
         };
       }
     }
@@ -401,12 +403,23 @@ function App() {
                           click "Look up" again in a moment.
                         </p>
                       ) : (
-                        <p className="hint">
-                          {Object.values(tradeDataResults).filter((r) => r.ok).length} of{' '}
-                          {Object.keys(tradeDataResults).length} countries matched real US import records for this
-                          HTS code (trailing months of Census import statistics). The rest fall back to the category
-                          estimate.
-                        </p>
+                        <>
+                          <p className="hint">
+                            {Object.values(tradeDataResults).filter((r) => r.ok).length} of{' '}
+                            {Object.keys(tradeDataResults).length} countries matched real US import records for this
+                            HTS code (trailing months of Census import statistics). The rest fall back to the
+                            category estimate. Hover a country's "First cost" line below to see exactly which months
+                            it used.
+                          </p>
+                          {tradeDataWindowsMismatch(tradeDataResults) && (
+                            <p className="form-error">
+                              ⚠ Not every country landed on the same month window — some fell back further than
+                              others when recent months failed to fetch (proxy flakiness). Comparing their costs
+                              directly is comparing different time periods. Hover each card's "First cost" line to
+                              check, or click "Look up" again to retry for a consistent window.
+                            </p>
+                          )}
+                        </>
                       ))}
                     {tradeDataStatus === 'error' && <p className="form-error">{tradeDataError}</p>}
                     <p className="hint">
