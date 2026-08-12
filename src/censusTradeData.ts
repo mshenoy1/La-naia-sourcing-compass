@@ -5,10 +5,12 @@ import { CENSUS_COUNTRY_CODES } from './tariffData';
  * Trade API (api.census.gov/data/timeseries/intltrade/imports/hs) — actual
  * US Customs import statistics, not a heuristic. This is an AGGREGATE
  * average (total declared customs value / total quantity) across all US
- * imports under a given HTS code from a given country over a trailing
- * multi-month window — the government does not publish per-shipment
- * declared values, so this is the real, population-wide average rather than
- * a sample of individual shipments.
+ * imports under a given HTS code from a given country over the trailing 12
+ * months (always the full window, not a subset — see lookupAtPrecision) —
+ * the government does not publish per-shipment declared values, so this is
+ * the real, population-wide average rather than a sample of individual
+ * shipments. A full year also smooths out single-month noise/seasonality
+ * and keeps every country's window consistent for a fair comparison.
  */
 export interface TradeDataSuccess {
   ok: true;
@@ -291,14 +293,18 @@ async function lookupAtPrecision(
   const acc: MonthAccumulation = { totalValue: 0, totalQty: 0, unit: null, description: undefined, monthsUsed: [] };
   const allMonths = recentMonths(MAX_LOOKBACK_MONTHS, START_OFFSET_MONTHS);
 
-  // Fetch months in parallel batches (not one sequential walk) so wall-clock
-  // latency stays close to a single round-trip rather than scaling with the
-  // number of months checked.
+  // Always fetch the full trailing 12-month window, in two batches of 6 for
+  // concurrency control (rather than blasting 12 requests per country at
+  // once against a rate-limited free proxy). We deliberately do NOT stop
+  // early once the first batch has some data — a country that happened to
+  // get fewer months from proxy flakiness would silently land on a
+  // narrower, different window than its peers, making a cross-country cost
+  // comparison compare different time periods without anyone noticing (this
+  // happened in practice — see git history). Fetching all 12 unconditionally
+  // keeps every country's window as close to identical as fetch reliability
+  // allows, and a fuller sample is also just a more stable average.
   await fetchMonthsBatch(code, level, ctyCode, apiKey, allMonths.slice(0, BATCH_MONTHS), acc);
-  if (acc.totalQty <= 0) {
-    const remaining = allMonths.slice(BATCH_MONTHS, MAX_LOOKBACK_MONTHS);
-    if (remaining.length > 0) await fetchMonthsBatch(code, level, ctyCode, apiKey, remaining, acc);
-  }
+  await fetchMonthsBatch(code, level, ctyCode, apiKey, allMonths.slice(BATCH_MONTHS, MAX_LOOKBACK_MONTHS), acc);
 
   if (acc.totalQty <= 0 || !acc.unit) return null;
 

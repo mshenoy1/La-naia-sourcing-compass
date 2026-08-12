@@ -384,7 +384,7 @@ function App() {
                         disabled={tradeDataStatus === 'loading'}
                       >
                         {tradeDataStatus === 'loading'
-                          ? 'Looking up US Customs import data… (the free proxy can be slow — up to ~40s)'
+                          ? 'Looking up 12 months of US Customs import data… (the free proxy can be slow — up to ~80s)'
                           : `🔍 Look up HTS ${category.representativeHtsCode} across 9 countries`}
                       </button>
                       <button type="button" className="hint-link" onClick={handleClearKey}>
