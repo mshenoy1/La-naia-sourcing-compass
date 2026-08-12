@@ -36,8 +36,25 @@ export const CATEGORY_PROFILES: CategoryProfile[] = [
     defaultFobCostRatio: 22,
     keywords: [
       'shirt', 't-shirt', 'tee', 'apparel', 'clothing', 'dress', 'jacket', 'hoodie',
-      'sweater', 'pants', 'jeans', 'legging', 'sock', 'underwear', 'activewear',
+      'sweater', 'pants', 'jeans', 'sock', 'underwear', 'activewear',
       'sportswear', 'garment', 'knit', 'woven', 'fabric', 'cotton', 'polo', 'skirt',
+    ],
+  },
+  {
+    id: 'leggings_activewear',
+    label: 'Leggings & Synthetic Athletic Bottoms',
+    htsChapter: 'Ch. 61',
+    representativeHtsCode: '6104.63.2006',
+    htsDescription:
+      "Women's/girls' leggings & synthetic-fiber trousers containing 5%+ elastomeric yarn — a distinct, notably higher-duty classification than general knit apparel (CBP rulings N027039, N302897, HQ 950369)",
+    mfnRate: 28.2,
+    section232: false,
+    section232Rate: 0,
+    weightClass: 'light',
+    defaultFobCostRatio: 22,
+    keywords: [
+      'legging', 'leggings', 'yoga pant', 'yoga pants', 'compression pant',
+      'compression tight', 'compression tights', 'tights',
     ],
   },
   {

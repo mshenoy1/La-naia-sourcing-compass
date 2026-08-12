@@ -1,5 +1,6 @@
 export type ProductCategoryId =
   | 'apparel'
+  | 'leggings_activewear'
   | 'footwear'
   | 'electronics'
   | 'furniture'
