@@ -85,7 +85,7 @@ function buildUrl(params: Record<string, string>, apiKey: string): string {
  * blocked. Route through the same public CORS proxy used for product-page
  * fetching (see productFetch.ts).
  */
-async function fetchViaProxy(url: string, timeoutMs: number): Promise<string> {
+async function fetchViaProxyOnce(url: string, timeoutMs: number): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -95,6 +95,19 @@ async function fetchViaProxy(url: string, timeoutMs: number): Promise<string> {
     return await res.text();
   } finally {
     clearTimeout(timer);
+  }
+}
+
+/**
+ * The free public CORS proxy is noticeably flaky in practice (observed
+ * intermittent 500s, 408s and timeouts unrelated to Census itself), so
+ * retry once before treating a request as failed.
+ */
+async function fetchViaProxy(url: string, timeoutMs: number): Promise<string> {
+  try {
+    return await fetchViaProxyOnce(url, timeoutMs);
+  } catch {
+    return await fetchViaProxyOnce(url, timeoutMs);
   }
 }
 
